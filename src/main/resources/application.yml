@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: telegram-transcription
+
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN}
+    api-base-url: https://api.telegram.org
+    # If set, the webhook controller validates this secret against the
+    # X-Telegram-Bot-Api-Secret-Token header Telegram sends on every request.
+    webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
+
+groq:
+  api:
+    key: ${GROQ_API_KEY}
+    base-url: https://api.groq.com/openai/v1
+    model: ${GROQ_MODEL:whisper-large-v3-turbo}
+
+logging:
+  level:
+    root: INFO
+    com.example.telegramtranscription: DEBUG

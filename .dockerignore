@@ -1,0 +1,12 @@
+target/
+.git/
+.gitignore
+.env.local
+.env
+*.md
+.idea/
+.vscode/
+.mvn/
+mvnw
+mvnw.cmd
+src-dup/
