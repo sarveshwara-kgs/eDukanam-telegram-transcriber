@@ -145,10 +145,12 @@ Open a chat with your bot in Telegram and send a voice message. Within a few sec
 | `telegram.bot.webhook-secret`    | `TELEGRAM_WEBHOOK_SECRET`     | *(empty = validation skipped)*        | Validates `X-Telegram-Bot-Api-Secret-Token` header   |
 | `groq.api.key`                   | `GROQ_API_KEY`                | *(required)*                          | Groq API key                                         |
 | `groq.api.model`                 | `GROQ_MODEL`                  | `whisper-large-v3-turbo`              | Groq speech-to-text model                            |
-| `groq.api.vision-model`          | `GROQ_VISION_MODEL`           | `qwen/qwen3.6-27b`                    | Groq Vision model for handwritten image OCR          |
 | `groq.transcription.mode`        | `GROQ_TRANSCRIPTION_MODE`     | `FORCED_LANGUAGE`                     | Mode: `FORCED_LANGUAGE` or `FILTERED_LANGUAGES`      |
 | `groq.transcription.language`    | `GROQ_TRANSCRIPTION_LANGUAGE` | `te`                                  | Target language when in `FORCED_LANGUAGE` mode       |
 | `groq.transcription.allowed-languages` | `GROQ_ALLOWED_LANGUAGES`| `te,telugu,en,english`                | Comma-separated allowed langs in `FILTERED_LANGUAGES`|
+| `ocr.api.key`                    | `OCR_API_KEY` / `OPENROUTER_API_KEY` | *(required for image OCR)*      | OpenRouter API key for handwritten image OCR         |
+| `ocr.api.base-url`               | `OCR_BASE_URL`                | `https://openrouter.ai/api/v1`        | Vision API Base URL                                  |
+| `ocr.api.model`                  | `OCR_MODEL`                   | `qwen/qwen-2.5-vl-72b-instruct`       | Multimodal Vision model for handwriting OCR          |
 | `server.port`                    | `SERVER_PORT`                 | `8080`                                | HTTP port                                            |
 
 ## Design notes

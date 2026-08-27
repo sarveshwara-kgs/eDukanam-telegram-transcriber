@@ -44,6 +44,19 @@ public class WebClientConfig {
                 .build();
     }
 
+    @Bean
+    public WebClient ocrWebClient(OcrProperties ocrProperties) {
+        String key = ocrProperties.key() != null ? ocrProperties.key() : "";
+        return WebClient.builder()
+                .baseUrl(ocrProperties.baseUrl())
+                .defaultHeader("Authorization", "Bearer " + key)
+                .defaultHeader("HTTP-Referer", "https://github.com/sarveshwara-kgs/eDukanam")
+                .defaultHeader("X-Title", "eDukanam Telegram OCR")
+                .clientConnector(new ReactorClientHttpConnector(buildHttpClient()))
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_IN_MEMORY_SIZE))
+                .build();
+    }
+
     private HttpClient buildHttpClient() {
         return HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MS)

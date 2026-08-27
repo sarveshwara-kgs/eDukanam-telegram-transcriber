@@ -23,7 +23,6 @@ groq:
     key: ${GROQ_API_KEY}
     base-url: https://api.groq.com/openai/v1
     model: ${GROQ_MODEL:whisper-large-v3-turbo}
-    vision-model: ${GROQ_VISION_MODEL:qwen/qwen3.6-27b}
   transcription:
     # Mode: FORCED_LANGUAGE (default) or FILTERED_LANGUAGES
     mode: ${GROQ_TRANSCRIPTION_MODE:FORCED_LANGUAGE}
@@ -31,6 +30,12 @@ groq:
     language: ${GROQ_TRANSCRIPTION_LANGUAGE:te}
     # Used when mode is FILTERED_LANGUAGES (comma-separated list of allowed languages)
     allowed-languages: ${GROQ_ALLOWED_LANGUAGES:te,telugu,en,english}
+
+ocr:
+  api:
+    key: ${OCR_API_KEY:${OPENROUTER_API_KEY:}}
+    base-url: ${OCR_BASE_URL:https://openrouter.ai/api/v1}
+    model: ${OCR_MODEL:qwen/qwen-2.5-vl-72b-instruct}
 
 logging:
   level:

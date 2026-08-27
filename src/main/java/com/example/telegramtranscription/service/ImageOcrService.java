@@ -1,13 +1,13 @@
 package com.example.telegramtranscription.service;
 
-import com.example.telegramtranscription.client.GroqClient;
+import com.example.telegramtranscription.client.OpenRouterOcrClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Service to extract handwritten or printed text from images using Groq's Vision capabilities.
+ * Service to extract handwritten or printed text from images using OpenRouter's Vision capabilities.
  */
 @Service
 public class ImageOcrService {
@@ -17,16 +17,17 @@ public class ImageOcrService {
     private static final String NO_TEXT_FOUND_MESSAGE = "no text found to transcribe!";
 
     private static final String DEFAULT_OCR_PROMPT =
-            "You are a strict OCR transcriber. Transcribe all handwritten or printed text from this image faithfully. "
-                    + "Maintain the original structure and formatting where possible. "
+            "You are an expert OCR transcriber specializing in reading difficult and handwritten notes. "
+                    + "Transcribe all handwritten or printed text from this image faithfully. "
+                    + "Maintain the original structure, line breaks, and formatting where possible. "
                     + "DO NOT output any thought process, preamble, explanation, or conversational commentary. "
                     + "Output ONLY the direct extracted text. "
                     + "If no text is found or visible in the image, output exactly: " + NO_TEXT_FOUND_MESSAGE;
 
-    private final GroqClient groqClient;
+    private final OpenRouterOcrClient ocrClient;
 
-    public ImageOcrService(GroqClient groqClient) {
-        this.groqClient = groqClient;
+    public ImageOcrService(OpenRouterOcrClient ocrClient) {
+        this.ocrClient = ocrClient;
     }
 
     /**
@@ -40,7 +41,7 @@ public class ImageOcrService {
      * Extracts text with a custom prompt.
      */
     public Mono<String> extractText(byte[] imageBytes, String mimeType, String prompt) {
-        return groqClient.extractTextFromImage(imageBytes, mimeType, prompt)
+        return ocrClient.extractTextFromImage(imageBytes, mimeType, prompt)
                 .map(this::cleanResponse)
                 .doOnNext(text -> log.debug("OCR result length={}", text.length()));
     }
