@@ -47,7 +47,18 @@ class ImageOcrServiceTest {
                 .thenReturn(Mono.just(""));
 
         StepVerifier.create(imageOcrService.extractText(imageBytes, "image/png"))
-                .expectNext("(no text detected)")
+                .expectNext("no text found to transcribe!")
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldStripThinkingTagsIfModelOutputsThoughtProcess() {
+        byte[] imageBytes = "image_with_thinking".getBytes();
+        when(groqClient.extractTextFromImage(eq(imageBytes), eq("image/jpeg"), any()))
+                .thenReturn(Mono.just("<think>\nAnalyzing handwriting...\nDetected line 1\n</think>\nActual handwritten text"));
+
+        StepVerifier.create(imageOcrService.extractText(imageBytes, "image/jpeg"))
+                .expectNext("Actual handwritten text")
                 .verifyComplete();
     }
 }
