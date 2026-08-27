@@ -1,13 +1,13 @@
-# Telegram Voice-to-Text Bot (Spring Boot + Groq)
+# Telegram Voice & Photo OCR Bot (Spring Boot + Groq)
 
 A single Spring Boot service that:
 1. Receives Telegram updates via webhook.
-2. Detects voice/audio messages.
-3. Downloads the audio from Telegram.
-4. Sends it to Groq's Whisper API for transcription.
+2. Detects voice/audio notes and photo messages (e.g. handwritten notes, documents).
+3. Downloads the audio or image from Telegram.
+4. Sends voice notes to Groq Whisper STT and photos to Groq Vision API.
 5. Sends the transcribed text back to the user via the same bot.
 
-No separate microservice — Telegram handling and Groq transcription both live in this one service, organized into clean layers.
+No separate microservice — Telegram handling, audio transcription, and image OCR all live in this one service, organized into clean layers.
 
 ## Architecture
 
@@ -17,6 +17,8 @@ com.example.telegramtranscription
 ├── config/
 │   ├── TelegramProperties.java             # telegram.bot.* config binding
 │   ├── GroqProperties.java                 # groq.api.* config binding
+│   ├── GroqTranscriptionProperties.java    # groq.transcription.* config binding
+│   ├── TranscriptionMode.java              # FORCED_LANGUAGE vs FILTERED_LANGUAGES
 │   ├── PropertiesConfig.java               # enables @ConfigurationProperties scanning
 │   └── WebClientConfig.java                # WebClient beans (telegram + groq)
 ├── controller/
@@ -24,16 +26,17 @@ com.example.telegramtranscription
 │   └── HealthController.java               # GET /health
 ├── dto/
 │   ├── telegram/                           # Telegram API request/response models
-│   └── groq/                               # Groq API response models
+│   └── groq/                               # Groq API response/request models
 ├── model/
 │   └── AudioFile.java                      # internal in-memory audio representation
 ├── client/
 │   ├── TelegramClient.java                 # raw HTTP calls to Telegram Bot API
-│   └── GroqClient.java                     # raw HTTP calls to Groq API
+│   └── GroqClient.java                     # raw HTTP calls to Groq API (STT & Vision)
 ├── service/
-│   ├── TelegramFileService.java            # resolves + downloads Telegram files
+│   ├── TelegramFileService.java            # resolves + downloads Telegram files & images
 │   ├── TelegramMessageService.java         # sends messages back to users
-│   ├── TranscriptionService.java           # business logic around Groq transcription
+│   ├── TranscriptionService.java           # business logic around Groq Whisper STT
+│   ├── ImageOcrService.java                # business logic around Groq Vision handwritten OCR
 │   └── VoiceMessageHandlerService.java     # orchestrates the end-to-end flow
 └── exception/
     ├── TelegramApiException.java
@@ -41,7 +44,7 @@ com.example.telegramtranscription
     └── GlobalExceptionHandler.java         # REST-level error responses
 ```
 
-**Flow:** `TelegramWebhookController` → `VoiceMessageHandlerService` → (`TelegramFileService` → `TranscriptionService` → `TelegramMessageService`).
+**Flow:** `TelegramWebhookController` → `VoiceMessageHandlerService` → (`TelegramFileService` → `TranscriptionService` / `ImageOcrService` → `TelegramMessageService`).
 
 This separation means you can later add new message types, commands, or business logic (e.g. persistence, summarization, translation) by adding new services without touching the controller or existing services.
 
@@ -142,6 +145,7 @@ Open a chat with your bot in Telegram and send a voice message. Within a few sec
 | `telegram.bot.webhook-secret`    | `TELEGRAM_WEBHOOK_SECRET`     | *(empty = validation skipped)*        | Validates `X-Telegram-Bot-Api-Secret-Token` header   |
 | `groq.api.key`                   | `GROQ_API_KEY`                | *(required)*                          | Groq API key                                         |
 | `groq.api.model`                 | `GROQ_MODEL`                  | `whisper-large-v3-turbo`              | Groq speech-to-text model                            |
+| `groq.api.vision-model`          | `GROQ_VISION_MODEL`           | `qwen/qwen3.6-27b`                    | Groq Vision model for handwritten image OCR          |
 | `groq.transcription.mode`        | `GROQ_TRANSCRIPTION_MODE`     | `FORCED_LANGUAGE`                     | Mode: `FORCED_LANGUAGE` or `FILTERED_LANGUAGES`      |
 | `groq.transcription.language`    | `GROQ_TRANSCRIPTION_LANGUAGE` | `te`                                  | Target language when in `FORCED_LANGUAGE` mode       |
 | `groq.transcription.allowed-languages` | `GROQ_ALLOWED_LANGUAGES`| `te,telugu,en,english`                | Comma-separated allowed langs in `FILTERED_LANGUAGES`|

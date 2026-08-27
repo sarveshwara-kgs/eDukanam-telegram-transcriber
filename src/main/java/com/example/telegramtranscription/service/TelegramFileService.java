@@ -43,6 +43,19 @@ public class TelegramFileService {
                 });
     }
 
+    /**
+     * Downloads raw file bytes for an image or general file given its Telegram file_id.
+     */
+    public Mono<byte[]> downloadFileBytes(String fileId) {
+        return telegramClient.getFile(fileId)
+                .flatMap(this::validateFileResponse)
+                .flatMap(fileResponse -> {
+                    String filePath = fileResponse.result().filePath();
+                    log.debug("Resolved Telegram file_id={} to file_path={}", fileId, filePath);
+                    return telegramClient.downloadFile(filePath);
+                });
+    }
+
     private Mono<TelegramFileResponse> validateFileResponse(TelegramFileResponse response) {
         if (response == null || !response.ok() || response.result() == null
                 || response.result().filePath() == null) {

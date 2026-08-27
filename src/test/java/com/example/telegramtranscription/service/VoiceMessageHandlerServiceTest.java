@@ -30,13 +30,16 @@ class VoiceMessageHandlerServiceTest {
     private TranscriptionService transcriptionService;
 
     @Mock
+    private ImageOcrService imageOcrService;
+
+    @Mock
     private TelegramMessageService telegramMessageService;
 
     private VoiceMessageHandlerService service;
 
     @BeforeEach
     void setUp() {
-        service = new VoiceMessageHandlerService(telegramFileService, transcriptionService, telegramMessageService);
+        service = new VoiceMessageHandlerService(telegramFileService, transcriptionService, imageOcrService, telegramMessageService);
     }
 
     @Test
@@ -104,5 +107,35 @@ class VoiceMessageHandlerServiceTest {
 
         StepVerifier.create(service.handleUpdate(update))
                 .verifyComplete();
+    }
+
+    @Test
+    void shouldProcessPhotoMessageSuccessfully() {
+        Long chatId = 12345L;
+        com.example.telegramtranscription.dto.telegram.TelegramPhotoSize photoSmall =
+                new com.example.telegramtranscription.dto.telegram.TelegramPhotoSize("file_small", "u_small", 100, 100, 500L);
+        com.example.telegramtranscription.dto.telegram.TelegramPhotoSize photoLarge =
+                new com.example.telegramtranscription.dto.telegram.TelegramPhotoSize("file_large", "u_large", 1024, 768, 50000L);
+
+        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), null, null,
+                java.util.List.of(photoSmall, photoLarge), null);
+        TelegramUpdate update = new TelegramUpdate(100L, message);
+
+        byte[] imageBytes = "image_bytes".getBytes();
+        when(telegramFileService.downloadFileBytes("file_large"))
+                .thenReturn(Mono.just(imageBytes));
+
+        when(imageOcrService.extractText(imageBytes, "image/jpeg"))
+                .thenReturn(Mono.just("Transcribed handwritten notes"));
+
+        when(telegramMessageService.sendText(chatId, "Transcribed handwritten notes"))
+                .thenReturn(Mono.empty());
+
+        StepVerifier.create(service.handleUpdate(update))
+                .verifyComplete();
+
+        verify(telegramFileService).downloadFileBytes("file_large");
+        verify(imageOcrService).extractText(imageBytes, "image/jpeg");
+        verify(telegramMessageService).sendText(chatId, "Transcribed handwritten notes");
     }
 }

@@ -27,19 +27,22 @@ public class VoiceMessageHandlerService {
     private static final Logger log = LoggerFactory.getLogger(VoiceMessageHandlerService.class);
 
     private static final String NO_VOICE_HELP_TEXT =
-            "Send me a voice message and I'll transcribe it for you.";
+            "Send me a voice message, audio file, or a photo with handwritten notes and I'll transcribe it for you.";
     private static final String PROCESSING_ERROR_TEXT =
-            "Sorry, I couldn't transcribe that voice message. Please try again.";
+            "Sorry, I couldn't process that message. Please try again.";
 
     private final TelegramFileService telegramFileService;
     private final TranscriptionService transcriptionService;
+    private final ImageOcrService imageOcrService;
     private final TelegramMessageService telegramMessageService;
 
     public VoiceMessageHandlerService(TelegramFileService telegramFileService,
                                        TranscriptionService transcriptionService,
+                                       ImageOcrService imageOcrService,
                                        TelegramMessageService telegramMessageService) {
         this.telegramFileService = telegramFileService;
         this.transcriptionService = transcriptionService;
+        this.imageOcrService = imageOcrService;
         this.telegramMessageService = telegramMessageService;
     }
 
@@ -63,8 +66,27 @@ public class VoiceMessageHandlerService {
             return handleAudio(chatId, message.audio());
         }
 
+        if (message.photo() != null && !message.photo().isEmpty()) {
+            return handlePhoto(chatId, message.photo());
+        }
+
         // Text or other message types: reply with a short help message.
         return telegramMessageService.sendText(chatId, NO_VOICE_HELP_TEXT);
+    }
+
+    private Mono<Void> handlePhoto(Long chatId, java.util.List<com.example.telegramtranscription.dto.telegram.TelegramPhotoSize> photos) {
+        // Telegram provides photos in ascending order of resolution; pick the last (highest quality) one
+        com.example.telegramtranscription.dto.telegram.TelegramPhotoSize largestPhoto = photos.get(photos.size() - 1);
+        log.info("Processing photo OCR for chat={}, width={}, height={}, fileSize={}",
+                chatId, largestPhoto.width(), largestPhoto.height(), largestPhoto.fileSize());
+
+        return telegramFileService.downloadFileBytes(largestPhoto.fileId())
+                .flatMap(bytes -> imageOcrService.extractText(bytes, "image/jpeg"))
+                .flatMap(text -> telegramMessageService.sendText(chatId, text))
+                .onErrorResume(ex -> {
+                    log.error("Failed to process photo OCR for chat={}", chatId, ex);
+                    return telegramMessageService.sendText(chatId, PROCESSING_ERROR_TEXT);
+                });
     }
 
     private Mono<Void> handleVoice(Long chatId, TelegramVoice voice) {

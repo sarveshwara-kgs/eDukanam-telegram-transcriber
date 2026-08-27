@@ -25,6 +25,7 @@ public class GroqClient {
 
     private static final Logger log = LoggerFactory.getLogger(GroqClient.class);
     private static final String TRANSCRIPTIONS_PATH = "/audio/transcriptions";
+    private static final String CHAT_COMPLETIONS_PATH = "/chat/completions";
 
     private final WebClient groqWebClient;
     private final GroqProperties groqProperties;
@@ -32,6 +33,56 @@ public class GroqClient {
     public GroqClient(WebClient groqWebClient, GroqProperties groqProperties) {
         this.groqWebClient = groqWebClient;
         this.groqProperties = groqProperties;
+    }
+
+    /**
+     * Sends an image as a base64 Data URL to Groq's Vision Chat Completion endpoint.
+     */
+    public Mono<String> extractTextFromImage(byte[] imageBytes, String mimeType, String prompt) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            return Mono.error(new GroqApiException("Cannot process empty image"));
+        }
+
+        String effectiveMimeType = (mimeType != null && !mimeType.isBlank()) ? mimeType : "image/jpeg";
+        String base64Image = java.util.Base64.getEncoder().encodeToString(imageBytes);
+        String dataUrl = "data:" + effectiveMimeType + ";base64," + base64Image;
+
+        com.example.telegramtranscription.dto.groq.GroqChatCompletionRequest request =
+                new com.example.telegramtranscription.dto.groq.GroqChatCompletionRequest(
+                        groqProperties.visionModel(),
+                        java.util.List.of(
+                                new com.example.telegramtranscription.dto.groq.GroqChatCompletionRequest.ChatMessage(
+                                        "user",
+                                        java.util.List.of(
+                                                com.example.telegramtranscription.dto.groq.GroqChatCompletionRequest.MessageContent.textContent(prompt),
+                                                com.example.telegramtranscription.dto.groq.GroqChatCompletionRequest.MessageContent.imageUrlContent(dataUrl)
+                                        )
+                                )
+                        ),
+                        2048,
+                        0.1
+                );
+
+        return groqWebClient.post()
+                .uri(CHAT_COMPLETIONS_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(com.example.telegramtranscription.dto.groq.GroqChatCompletionResponse.class)
+                .map(response -> {
+                    String content = response.firstContent();
+                    return content != null ? content.trim() : "";
+                })
+                .doOnError(WebClientResponseException.class, ex ->
+                        log.error("Groq vision completion failed: status={}, body={}",
+                                ex.getStatusCode(), ex.getResponseBodyAsString()))
+                .onErrorMap(ex -> !(ex instanceof GroqApiException), ex -> {
+                    if (ex instanceof WebClientResponseException wcre) {
+                        return new GroqApiException("Failed to perform OCR via Groq Vision (status "
+                                + wcre.getStatusCode() + "): " + wcre.getResponseBodyAsString(), ex);
+                    }
+                    return new GroqApiException("Failed to perform OCR via Groq Vision", ex);
+                });
     }
 
     /**
