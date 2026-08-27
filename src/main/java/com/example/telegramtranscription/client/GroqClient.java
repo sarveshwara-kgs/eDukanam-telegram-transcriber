@@ -35,9 +35,27 @@ public class GroqClient {
     }
 
     /**
-     * Sends audio bytes as multipart/form-data to Groq for transcription.
+     * Sends audio bytes as multipart/form-data to Groq with standard json response format.
      */
     public Mono<GroqTranscriptionResponse> transcribe(AudioFile audioFile) {
+        return transcribe(audioFile, null, "json");
+    }
+
+    /**
+     * Sends audio bytes to Groq forcing a specific language (e.g. "te" for Telugu).
+     */
+    public Mono<GroqTranscriptionResponse> transcribeForcedLanguage(AudioFile audioFile, String language) {
+        return transcribe(audioFile, language, "json");
+    }
+
+    /**
+     * Sends audio bytes to Groq with verbose_json response format to capture detected language metadata.
+     */
+    public Mono<GroqTranscriptionResponse> transcribeVerbose(AudioFile audioFile) {
+        return transcribe(audioFile, null, "verbose_json");
+    }
+
+    private Mono<GroqTranscriptionResponse> transcribe(AudioFile audioFile, String language, String responseFormat) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         MediaType mediaType = resolveMediaType(audioFile);
 
@@ -51,7 +69,11 @@ public class GroqClient {
                 .contentType(mediaType);
 
         builder.part("model", groqProperties.model());
-        builder.part("response_format", "json");
+        builder.part("response_format", responseFormat != null ? responseFormat : "json");
+
+        if (language != null && !language.isBlank()) {
+            builder.part("language", language);
+        }
 
         return groqWebClient.post()
                 .uri(TRANSCRIPTIONS_PATH)

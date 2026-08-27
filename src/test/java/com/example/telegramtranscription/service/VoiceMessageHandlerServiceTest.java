@@ -87,4 +87,22 @@ class VoiceMessageHandlerServiceTest {
 
         assertEquals("voice_file.ogg", audioFileCaptor.getValue().filename());
     }
+
+    @Test
+    void shouldNotSendMessageWhenTranscriptionServiceReturnsEmptyDueToLanguageFilter() {
+        Long chatId = 12345L;
+        TelegramVoice voice = new TelegramVoice("file_id_123", "unique_123", 5, "audio/ogg", 1024L);
+        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null);
+        TelegramUpdate update = new TelegramUpdate(100L, message);
+
+        AudioFile downloadedAudio = new AudioFile("dummy".getBytes(), "voice_123.oga", "audio/ogg");
+        when(telegramFileService.downloadAudio(eq("file_id_123"), eq("audio/ogg"), eq("voice.ogg")))
+                .thenReturn(Mono.just(downloadedAudio));
+
+        when(transcriptionService.transcribe(any()))
+                .thenReturn(Mono.empty());
+
+        StepVerifier.create(service.handleUpdate(update))
+                .verifyComplete();
+    }
 }

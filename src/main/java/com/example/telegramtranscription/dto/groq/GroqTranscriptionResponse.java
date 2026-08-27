@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GroqTranscriptionResponse(
-        @JsonProperty("text") String text
+        @JsonProperty("text") String text,
+        @JsonProperty("language") String language
 ) {
 }

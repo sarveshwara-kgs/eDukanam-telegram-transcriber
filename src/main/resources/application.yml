@@ -23,6 +23,13 @@ groq:
     key: ${GROQ_API_KEY}
     base-url: https://api.groq.com/openai/v1
     model: ${GROQ_MODEL:whisper-large-v3-turbo}
+  transcription:
+    # Mode: FORCED_LANGUAGE (default) or FILTERED_LANGUAGES
+    mode: ${GROQ_TRANSCRIPTION_MODE:FORCED_LANGUAGE}
+    # Used when mode is FORCED_LANGUAGE (e.g. "te" for Telugu)
+    language: ${GROQ_TRANSCRIPTION_LANGUAGE:te}
+    # Used when mode is FILTERED_LANGUAGES (comma-separated list of allowed languages)
+    allowed-languages: ${GROQ_ALLOWED_LANGUAGES:te,telugu,en,english}
 
 logging:
   level:

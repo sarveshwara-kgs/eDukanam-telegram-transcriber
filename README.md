@@ -136,18 +136,20 @@ Open a chat with your bot in Telegram and send a voice message. Within a few sec
 
 ## Configuration reference (`application.yml`)
 
-| Property                    | Env var                   | Default                              | Description                              |
-|------------------------------|----------------------------|---------------------------------------|-------------------------------------------|
-| `telegram.bot.token`         | `TELEGRAM_BOT_TOKEN`       | *(required)*                          | Bot token from BotFather                  |
-| `telegram.bot.webhook-secret`| `TELEGRAM_WEBHOOK_SECRET`  | *(empty = validation skipped)*        | Validates `X-Telegram-Bot-Api-Secret-Token` header |
-| `groq.api.key`               | `GROQ_API_KEY`             | *(required)*                          | Groq API key                              |
-| `groq.api.model`             | `GROQ_MODEL`               | `whisper-large-v3-turbo`              | Groq speech-to-text model                 |
-| `server.port`                | `SERVER_PORT`              | `8080`                                | HTTP port                                 |
+| Property                         | Env var                       | Default                               | Description                                         |
+|----------------------------------|-------------------------------|---------------------------------------|-----------------------------------------------------|
+| `telegram.bot.token`             | `TELEGRAM_BOT_TOKEN`          | *(required)*                          | Bot token from BotFather                             |
+| `telegram.bot.webhook-secret`    | `TELEGRAM_WEBHOOK_SECRET`     | *(empty = validation skipped)*        | Validates `X-Telegram-Bot-Api-Secret-Token` header   |
+| `groq.api.key`                   | `GROQ_API_KEY`                | *(required)*                          | Groq API key                                         |
+| `groq.api.model`                 | `GROQ_MODEL`                  | `whisper-large-v3-turbo`              | Groq speech-to-text model                            |
+| `groq.transcription.mode`        | `GROQ_TRANSCRIPTION_MODE`     | `FORCED_LANGUAGE`                     | Mode: `FORCED_LANGUAGE` or `FILTERED_LANGUAGES`      |
+| `groq.transcription.language`    | `GROQ_TRANSCRIPTION_LANGUAGE` | `te`                                  | Target language when in `FORCED_LANGUAGE` mode       |
+| `groq.transcription.allowed-languages` | `GROQ_ALLOWED_LANGUAGES`| `te,telugu,en,english`                | Comma-separated allowed langs in `FILTERED_LANGUAGES`|
+| `server.port`                    | `SERVER_PORT`                 | `8080`                                | HTTP port                                            |
 
 ## Design notes
 
-- **Reactive `WebClient`** is used for outbound HTTP calls (Telegram + Groq) for efficient non-blocking I/O, even though the webhook controller itself is a standard Spring MVC (`spring-boot-starter-web`) endpoint. Processing is dispatched with `subscribeOn(Schedulers.boundedElastic())` so the webhook responds to Telegram immediately (avoiding Telegram's retry-on-timeout behavior), while transcription happens in the background and the result is delivered via a follow-up `sendMessage` call.
-- **Multipart upload to Groq**: audio bytes are sent as `multipart/form-data` per Groq's OpenAI-compatible `/audio/transcriptions` endpoint, using the downloaded filename (with a `.oga` fallback for voice notes) so Groq can correctly detect the audio format.
+- **Multipart upload to Groq**: audio bytes are sent as `multipart/form-data` per Groq's OpenAI-compatible `/audio/transcriptions` endpoint. The service automatically normalizes Telegram's OGG/Opus files (`.oga`, `.opus`, or extensionless) to `.ogg` format, which is officially supported by Groq Whisper STT.
 - **Both `Voice` and `Audio` message types** are supported — voice notes (recorded in-app) and regular audio file uploads.
 - **Webhook secret validation** is optional but recommended in production to ensure requests genuinely originate from Telegram.
 - **Extensibility**: to add new behavior (e.g., persisting transcripts, supporting bot commands, translating text), add new services and call them from `VoiceMessageHandlerService`, or add new branches in `handleUpdate` — the controller and low-level clients never need to change.
