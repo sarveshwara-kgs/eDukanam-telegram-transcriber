@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -38,6 +39,7 @@ public class GroqClient {
      */
     public Mono<GroqTranscriptionResponse> transcribe(AudioFile audioFile) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        MediaType mediaType = resolveMediaType(audioFile);
 
         builder.part("file", new ByteArrayResource(audioFile.bytes()) {
                     @Override
@@ -45,7 +47,8 @@ public class GroqClient {
                         return audioFile.filename();
                     }
                 })
-                .filename(audioFile.filename());
+                .filename(audioFile.filename())
+                .contentType(mediaType);
 
         builder.part("model", groqProperties.model());
         builder.part("response_format", "json");
@@ -59,7 +62,27 @@ public class GroqClient {
                 .doOnError(WebClientResponseException.class, ex ->
                         log.error("Groq transcription failed: status={}, body={}",
                                 ex.getStatusCode(), ex.getResponseBodyAsString()))
-                .onErrorMap(ex -> !(ex instanceof GroqApiException),
-                        ex -> new GroqApiException("Failed to transcribe audio via Groq", ex));
+                .onErrorMap(ex -> !(ex instanceof GroqApiException), ex -> {
+                    if (ex instanceof WebClientResponseException wcre) {
+                        return new GroqApiException("Failed to transcribe audio via Groq (status "
+                                + wcre.getStatusCode() + "): " + wcre.getResponseBodyAsString(), ex);
+                    }
+                    return new GroqApiException("Failed to transcribe audio via Groq", ex);
+                });
+    }
+
+    private MediaType resolveMediaType(AudioFile audioFile) {
+        if (audioFile.filename() != null && audioFile.filename().toLowerCase().endsWith(".ogg")) {
+            return MediaType.parseMediaType("audio/ogg");
+        }
+        if (audioFile.mimeType() != null && !audioFile.mimeType().isBlank()) {
+            try {
+                return MediaType.parseMediaType(audioFile.mimeType());
+            } catch (Exception ignored) {
+                // fallback to filename based resolution
+            }
+        }
+        return MediaTypeFactory.getMediaType(audioFile.filename())
+                .orElse(MediaType.APPLICATION_OCTET_STREAM);
     }
 }

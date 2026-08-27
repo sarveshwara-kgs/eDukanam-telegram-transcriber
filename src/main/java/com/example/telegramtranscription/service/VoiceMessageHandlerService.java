@@ -70,7 +70,7 @@ public class VoiceMessageHandlerService {
     private Mono<Void> handleVoice(Long chatId, TelegramVoice voice) {
         log.info("Processing voice message from chat={}, duration={}s", chatId, voice.duration());
 
-        return telegramFileService.downloadAudio(voice.fileId(), voice.mimeType(), "voice.oga")
+        return telegramFileService.downloadAudio(voice.fileId(), voice.mimeType(), "voice.ogg")
                 .flatMap(this::ensureExtension)
                 .flatMap(transcriptionService::transcribe)
                 .flatMap(text -> telegramMessageService.sendText(chatId, text))
@@ -86,6 +86,7 @@ public class VoiceMessageHandlerService {
         String fallbackName = audio.fileName() != null ? audio.fileName() : "audio.mp3";
 
         return telegramFileService.downloadAudio(audio.fileId(), audio.mimeType(), fallbackName)
+                .flatMap(this::ensureExtension)
                 .flatMap(transcriptionService::transcribe)
                 .flatMap(text -> telegramMessageService.sendText(chatId, text))
                 .onErrorResume(ex -> {
@@ -95,16 +96,22 @@ public class VoiceMessageHandlerService {
     }
 
     /**
-     * Telegram voice notes are OGG/Opus but the resolved file_path sometimes
-     * lacks a clear extension. Groq relies on the filename extension to pick
-     * the right decoder, so we normalize voice notes to ".oga".
+     * Telegram voice notes are OGG/Opus with .oga or .opus extensions.
+     * Groq Whisper STT strictly requires supported file extensions
+     * (flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm), so we normalize
+     * .oga, .opus, or extensionless voice notes to ".ogg".
      */
     private Mono<AudioFile> ensureExtension(AudioFile audioFile) {
         String name = audioFile.filename();
-        if (name == null || !name.contains(".")) {
-            name = (name == null ? "voice" : name) + ".oga";
-            return Mono.just(new AudioFile(audioFile.bytes(), name, audioFile.mimeType()));
+        if (name == null || name.isBlank()) {
+            name = "audio.ogg";
+        } else if (name.toLowerCase().endsWith(".oga")) {
+            name = name.substring(0, name.length() - 4) + ".ogg";
+        } else if (name.toLowerCase().endsWith(".opus")) {
+            name = name.substring(0, name.length() - 5) + ".ogg";
+        } else if (!name.contains(".")) {
+            name = name + ".ogg";
         }
-        return Mono.just(audioFile);
+        return Mono.just(new AudioFile(audioFile.bytes(), name, audioFile.mimeType()));
     }
 }

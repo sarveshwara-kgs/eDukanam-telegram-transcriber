@@ -58,6 +58,6 @@ public class TelegramFileService {
         if (filePath != null && !filePath.isBlank()) {
             return filePath;
         }
-        return fallbackName != null ? fallbackName : "audio.oga";
+        return fallbackName != null ? fallbackName : "audio.ogg";
     }
 }
