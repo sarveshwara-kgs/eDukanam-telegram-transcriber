@@ -46,7 +46,7 @@ class VoiceMessageHandlerServiceTest {
     void shouldNormalizeOgaExtensionToOggWhenProcessingVoiceMessage() {
         Long chatId = 12345L;
         TelegramVoice voice = new TelegramVoice("file_id_123", "unique_123", 5, "audio/ogg", 1024L);
-        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null);
+        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null, null);
         TelegramUpdate update = new TelegramUpdate(100L, message);
 
         AudioFile downloadedAudio = new AudioFile("dummy".getBytes(), "voice_123.oga", "audio/ogg");
@@ -71,7 +71,7 @@ class VoiceMessageHandlerServiceTest {
     void shouldHandleExtensionlessVoiceMessageByAddingOgg() {
         Long chatId = 12345L;
         TelegramVoice voice = new TelegramVoice("file_id_123", "unique_123", 5, "audio/ogg", 1024L);
-        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null);
+        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null, null);
         TelegramUpdate update = new TelegramUpdate(100L, message);
 
         AudioFile downloadedAudio = new AudioFile("dummy".getBytes(), "voice_file", "audio/ogg");
@@ -95,7 +95,7 @@ class VoiceMessageHandlerServiceTest {
     void shouldNotSendMessageWhenTranscriptionServiceReturnsEmptyDueToLanguageFilter() {
         Long chatId = 12345L;
         TelegramVoice voice = new TelegramVoice("file_id_123", "unique_123", 5, "audio/ogg", 1024L);
-        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null);
+        TelegramMessage message = new TelegramMessage(1L, new TelegramChat(chatId, "private"), voice, null, null, null);
         TelegramUpdate update = new TelegramUpdate(100L, message);
 
         AudioFile downloadedAudio = new AudioFile("dummy".getBytes(), "voice_123.oga", "audio/ogg");
